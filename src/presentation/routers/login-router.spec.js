@@ -2,12 +2,22 @@ const LoginRouter = require('./login-router')
 const MissingParamError = require('../helpers/missing-error')
 
 const makeSut = () => {
-  return new LoginRouter()
+  class AuthUseCase {
+    auth (email) {
+      this.email = email
+    }
+  }
+  const authUseCase = new AuthUseCase()
+  const sut = new LoginRouter(authUseCase)
+  return {
+    sut,
+    authUseCase
+  }
 }
 
 describe('Login Router', () => {
-  test('Shoube return 400 if no email is provided', () => {
-    const sut = makeSut()
+  test('Should return 400 if no email is provided', () => {
+    const { sut } = makeSut()
     const httpRequest = {
       body: {
         password: 'any_password'
@@ -19,8 +29,8 @@ describe('Login Router', () => {
     expect(httpResponse.body).toEqual(new MissingParamError('email'))
   })
 
-  test('Shoube return 400 if no password is provided', () => {
-    const sut = makeSut()
+  test('Should return 400 if no password is provided', () => {
+    const { sut } = makeSut()
     const httpRequest = {
       body: {
         email: 'any_email@gmail.com'
@@ -32,15 +42,27 @@ describe('Login Router', () => {
     expect(httpResponse.body).toEqual(new MissingParamError('password'))
   })
 
-  test('Shoube return 500 if httpRequest is provided', () => {
-    const sut = makeSut()
+  test('Should return 500 if httpRequest is provided', () => {
+    const { sut } = makeSut()
     const httpResponse = sut.route()
     expect(httpResponse.statusCode).toBe(500)
   })
 
-  test('Shoube return 500 if httpRequest.body is null', () => {
-    const sut = makeSut()
+  test('Should return 500 if httpRequest.body is null', () => {
+    const { sut } = makeSut()
     const httpResponse = sut.route({})
     expect(httpResponse.statusCode).toEqual(500)
+  })
+
+  test('Should call AuthUseCase with correct params', () => {
+    const { sut, authUseCase } = makeSut()
+    const httpRequest = {
+      body: {
+        email: 'any_email@email.com',
+        password: 'any_password'
+      }
+    }
+    sut.route(httpRequest)
+    expect(authUseCase.email).toBe(httpRequest.body.email)
   })
 })
